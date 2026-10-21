@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./lib/supabase";
 
 /* MAIN PAGES */
 import WelcomePage from "./components/welcomePage";
@@ -26,15 +26,6 @@ import Search from "./components/Search";
 import Reports from "./components/Reports";
 import AIAssistant from "./components/AIAssistant";
 import Settings from "./components/Settings";
-
-/* SUPABASE CONFIGURATION */
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey)
-    : null;
 
 /* PAGE CONSTANTS */
 const PAGES = {

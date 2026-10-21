@@ -85,12 +85,19 @@ app = FastAPI(
 # Register AI Assistant endpoints.
 app.include_router(ai_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+configured_origins = os.getenv("FRONTEND_ORIGINS", "").strip()
+frontend_origins = (
+    [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+    if configured_origins
+    else [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-    ],
+    ]
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=frontend_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -184,8 +191,9 @@ def read_upload(file: UploadFile) -> bytes:
     return content
 
 
+
 def run_ocr(doc_type: str, content: bytes, filename: str):
-    """Extract text and parse certificate fields."""
+    """Extract text and normalize parser output for certificate fields."""
 
     try:
         text = extract_text(content, filename)
@@ -201,9 +209,28 @@ def run_ocr(doc_type: str, content: bytes, filename: str):
             detail="No readable text was found in this file.",
         )
 
-    fields = parse_document(doc_type, text)
+    try:
+        parsed = parse_document(doc_type, text)
+    except Exception:
+        raise HTTPException(
+            status_code=422,
+            detail="Certificate parsing failed. Check the OCR parser.",
+        )
+
+    # Some parsers return {"fields": {...}}, while others
+    # may return the fields dictionary directly.
+    if isinstance(parsed, dict) and isinstance(parsed.get("fields"), dict):
+        fields = parsed["fields"]
+    elif isinstance(parsed, dict):
+        fields = parsed
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="The certificate parser returned an invalid result.",
+        )
 
     return text, fields
+
 
 
 def signed_url(

@@ -60,6 +60,11 @@ pip-wheel-metadata/
 # ==========================================
 # OCR and AI temporary files
 # ==========================================
+*.bak
+**/*.bak
+backend/scratch*.txt
+/package-lock.json
+/backend/package-lock.json
 temp/
 **/temp/
 tmp/

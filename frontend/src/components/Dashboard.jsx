@@ -27,23 +27,15 @@ import {
   Menu,
 } from "lucide-react";
 
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
 import ReactMarkdown from "react-markdown";
 import "./Dashboard.css";
 
 // FastAPI + Ollama backend
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:8000"
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:8000" : "")
 ).replace(/\/+$/, "");
-
-// Supabase connection
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey)
-    : null;
 
 // Fix escaped Markdown characters returned by the AI
 function cleanReply(text) {
@@ -351,6 +343,12 @@ export default function Dashboard({
 
       // Send other questions to the local AI
       if (!answer) {
+        if (!API_BASE_URL) {
+          throw new Error(
+            "AI backend is not configured. Set VITE_API_URL for this deployment."
+          );
+        }
+
         const apiUrl = `${API_BASE_URL}/api/ai/chat`;
 
         console.log("SMART ERP chatbot API:", apiUrl);

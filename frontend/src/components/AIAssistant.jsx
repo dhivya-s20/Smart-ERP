@@ -16,7 +16,8 @@ import "./AIAssistant.css";
 
 // Backend API URL
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:8000"
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:8000" : "")
 ).replace(/\/+$/, "");
 
 const INITIAL_MESSAGE = {
@@ -116,6 +117,12 @@ export default function AIAssistant({ onBack }) {
 
     try {
       const apiUrl = `${API_BASE_URL}/api/ai/chat`;
+
+      if (!API_BASE_URL) {
+        throw new Error(
+          "AI backend is not configured. Set VITE_API_URL for this deployment."
+        );
+      }
 
       console.log("SMART ERP AI API:", apiUrl);
       console.log("User question:", question);

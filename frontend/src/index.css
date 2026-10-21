@@ -1078,6 +1078,35 @@ input:focus-visible {
   transform: translateY(0);
 }
 
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  margin-top: 14px;
+  padding: 12px 24px;
+  color: #294366;
+  font-size: 1rem;
+  font-weight: 650;
+  background: #ffffff;
+  border: 1px solid #dce5f1;
+  border-radius: 11px;
+  box-shadow: 0 3px 10px rgba(24, 53, 98, 0.04);
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.google-login-button:hover:not(:disabled) {
+  background: #f7f9fc;
+  border-color: #b9c9df;
+}
+
+.google-login-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .submit-arrow {
   font-size: 1.45rem;
 }

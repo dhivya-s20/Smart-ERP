@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import "./Processing.css";
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")
 ).replace(/\/+$/, "");
 
 function getDocType(certificate) {
@@ -132,6 +133,12 @@ export default function Processing({
         if (!docType) {
           throw new Error(
             "Unsupported certificate type. Please go back and select the certificate again."
+          );
+        }
+
+        if (!API_BASE_URL) {
+          throw new Error(
+            "OCR backend is not configured. Set VITE_API_URL for this deployment."
           );
         }
 
