@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
+import { authenticatedFetch } from "../lib/authenticatedFetch";
 import ReactMarkdown from "react-markdown";
 import "./Dashboard.css";
 
@@ -354,7 +355,7 @@ export default function Dashboard({
         console.log("SMART ERP chatbot API:", apiUrl);
         console.log("Chat question:", question);
 
-        const response = await fetch(apiUrl, {
+        const response = await authenticatedFetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

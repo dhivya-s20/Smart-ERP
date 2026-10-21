@@ -10,9 +10,13 @@ import {
   RefreshCw,
   CircleAlert,
 } from "lucide-react";
+import { authenticatedFetch } from "../lib/authenticatedFetch";
 import "./MyCertificates.css";
 
-const API_URL = "http://127.0.0.1:8000/certificates/";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")
+).replace(/\/+$/, "");
 
 function getValue(record, keys, fallback = "") {
   for (const key of keys) {
@@ -127,7 +131,13 @@ export default function MyCertificates({ onBack }) {
     setError("");
 
     try {
-      const response = await fetch(API_URL);
+      if (!API_BASE_URL) {
+        throw new Error(
+          "The certificate service is not configured. Set VITE_API_URL for this deployment."
+        );
+      }
+
+      const response = await authenticatedFetch(`${API_BASE_URL}/certificates/`);
 
       if (!response.ok) {
         let message = `Unable to load certificate records (${response.status}).`;

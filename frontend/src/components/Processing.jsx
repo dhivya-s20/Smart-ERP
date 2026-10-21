@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
+import { authenticatedFetch } from "../lib/authenticatedFetch";
 import "./Processing.css";
 
 const API_BASE_URL = (
@@ -151,7 +152,7 @@ export default function Processing({
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch(
+        const response = await authenticatedFetch(
           `${API_BASE_URL}/extract/${encodeURIComponent(docType)}`,
           {
             method: "POST",

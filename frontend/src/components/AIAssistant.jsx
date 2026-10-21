@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+import { authenticatedFetch } from "../lib/authenticatedFetch";
 import "./AIAssistant.css";
 
 // Backend API URL
@@ -127,7 +128,7 @@ export default function AIAssistant({ onBack }) {
       console.log("SMART ERP AI API:", apiUrl);
       console.log("User question:", question);
 
-      const response = await fetch(apiUrl, {
+      const response = await authenticatedFetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

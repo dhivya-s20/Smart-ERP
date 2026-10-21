@@ -43,7 +43,9 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOCAL_TESSDATA = BASE_DIR / "tessdata"
 if LOCAL_TESSDATA.exists():
-    os.environ["TESSDATA_PREFIX"] = str(LOCAL_TESSDATA)
+    # Tesseract expects TESSDATA_PREFIX to be the parent directory containing
+    # the `tessdata` folder, rather than the folder itself.
+    os.environ["TESSDATA_PREFIX"] = str(BASE_DIR)
 
 TESS_LANG = (os.getenv("OCR_LANGUAGES") or os.getenv("TESS_LANG") or "eng+tam").replace(",", "+").replace(" ", "")
 MIN_PDF_TEXT_CHARS = 80

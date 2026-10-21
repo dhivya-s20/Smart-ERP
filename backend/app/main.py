@@ -16,10 +16,10 @@ import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import Client, create_client
@@ -55,6 +55,12 @@ BUCKET = (
     or os.getenv("SUPABASE_BUCKET")
     or "certificates"
 ).strip()
+
+CERTIFICATE_ADMIN_USER_IDS = {
+    value.strip()
+    for value in os.getenv("ERP_CERTIFICATE_ADMIN_USER_IDS", "").split(",")
+    if value.strip()
+}
 
 MAX_FILE_MB = 10
 
@@ -95,12 +101,15 @@ frontend_origins = (
     ]
 )
 
+if "*" in frontend_origins:
+    raise RuntimeError("FRONTEND_ORIGINS must contain explicit origins, not '*'.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=frontend_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -139,6 +148,52 @@ def get_sb() -> Client:
             )
 
     return _sb
+
+
+def require_authenticated_user(
+    authorization: Optional[str] = Header(default=None),
+) -> Any:
+    """Verify the caller's Supabase access token and return its Auth user."""
+
+    scheme, separator, token = (authorization or "").partition(" ")
+    if not separator or scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(
+            status_code=401,
+            detail="A valid Supabase Bearer access token is required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        auth_result = get_sb().auth.get_user(token.strip())
+        user = getattr(auth_result, "user", None)
+        if not user or not getattr(user, "id", None):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired session. Please sign in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return user
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Unable to verify your session. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def require_certificate_admin(
+    current_user: Any = Depends(require_authenticated_user),
+) -> Any:
+    """Limit service-role access to explicitly configured ERP administrators."""
+
+    if str(current_user.id) not in CERTIFICATE_ADMIN_USER_IDS:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to access certificate records.",
+        )
+    return current_user
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +360,9 @@ def health():
 
 
 @app.get("/health/supabase", tags=["Health"])
-def health_supabase():
+def health_supabase(
+    _current_user: Any = Depends(require_certificate_admin),
+):
     """Check Supabase configuration, database access, and storage."""
 
     result = {
@@ -343,7 +400,9 @@ def health_supabase():
 # ---------------------------------------------------------------------------
 
 @app.get("/doc-types", tags=["Certificates"])
-def doc_types():
+def doc_types(
+    _current_user: Any = Depends(require_authenticated_user),
+):
     """Return supported document types and their table configurations."""
 
     return {
@@ -364,6 +423,7 @@ def extract_only(
     doc_type: str,
     file: UploadFile = File(...),
     student_id: Optional[int] = Form(None),
+    _current_user: Any = Depends(require_certificate_admin),
 ):
     """Preview OCR and parsed fields without saving the certificate."""
 
@@ -418,6 +478,7 @@ def upload_certificate(
         None,
         description="JSON containing corrected certificate fields.",
     ),
+    _current_user: Any = Depends(require_certificate_admin),
 ):
     """
     Validate the student, run OCR, upload the file to Supabase Storage,
@@ -565,7 +626,9 @@ def upload_certificate(
 # ---------------------------------------------------------------------------
 
 @app.get("/certificates/", tags=["Certificates"])
-def list_all_certificates():
+def list_all_certificates(
+    _current_user: Any = Depends(require_certificate_admin),
+):
     """
     Return certificates from all document tables configured in DOC_TYPES.
 
@@ -642,6 +705,7 @@ def list_all_certificates():
 def list_certificates(
     doc_type: str,
     student_id: int,
+    _current_user: Any = Depends(require_certificate_admin),
 ):
     """Return saved certificates for the specified student."""
 
@@ -681,7 +745,6 @@ def list_certificates(
 # ---------------------------------------------------------------------------
 
 class VerifyBody(BaseModel):
-    verified_by: str
     status: str = "verified"
 
 
@@ -693,6 +756,7 @@ def verify_certificate(
     doc_type: str,
     record_id: int,
     body: VerifyBody,
+    current_user: Any = Depends(require_certificate_admin),
 ):
     """Update the verification status of a certificate."""
 
@@ -717,7 +781,7 @@ def verify_certificate(
             .update(
                 {
                     "verification_status": body.status,
-                    "verified_by": body.verified_by,
+                    "verified_by": str(current_user.id),
                     "verified_at": datetime.now(
                         timezone.utc
                     ).isoformat(),
@@ -756,6 +820,7 @@ def verify_certificate(
 def delete_certificate(
     doc_type: str,
     record_id: int,
+    _current_user: Any = Depends(require_certificate_admin),
 ):
     """Delete a certificate record and attempt to remove its stored file."""
 
