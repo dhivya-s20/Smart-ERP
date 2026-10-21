@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseAnonKey } from "../lib/supabase";
 
 export default function LoginPage({ onBack, onLogin }) {
   const [activeTab, setActiveTab] = useState("login");
@@ -235,7 +235,10 @@ function LoginForm({ onCreateAccount, onLogin }) {
         provider: "google",
         options: {
           redirectTo: window.location.origin,
-          queryParams: { prompt: "select_account" },
+          queryParams: {
+            apikey: supabaseAnonKey,
+            prompt: "select_account",
+          },
         },
       });
 
