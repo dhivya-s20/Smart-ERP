@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "./lib/supabase";
+import { supabase, supabaseConfigError } from "./lib/supabase";
 
 /* MAIN PAGES */
 import WelcomePage from "./components/welcomePage";
@@ -370,6 +370,13 @@ export default function App() {
 
   /* SUPABASE CONFIGURATION CHECK */
   if (!supabase) {
+    const configurationMessage =
+      supabaseConfigError === "invalid-url"
+        ? "VITE_SUPABASE_URL is present but is not a valid root HTTPS Supabase project URL. Check the URL in your deployment environment."
+        : import.meta.env.PROD
+          ? "VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY was not available when this production build was created. Add both to the Vercel Production environment, then create a new deployment."
+          : "Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to frontend/.env.local, then restart the development server.";
+
     return (
       <main
         style={{
@@ -383,11 +390,12 @@ export default function App() {
         }}
       >
         <section>
-          <h2>Supabase Configuration Missing</h2>
-          <p>
-            Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-            to frontend/.env, then restart the development server.
-          </p>
+          <h2>
+            {supabaseConfigError === "invalid-url"
+              ? "Supabase Configuration Invalid"
+              : "Supabase Configuration Missing"}
+          </h2>
+          <p>{configurationMessage}</p>
         </section>
       </main>
     );

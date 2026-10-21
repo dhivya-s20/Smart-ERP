@@ -1,8 +1,10 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || "").trim();
+export const supabaseAnonKey = (
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+).trim();
 
 const isValidSupabaseUrl = (() => {
   if (!supabaseUrl) return false;
@@ -25,17 +27,24 @@ const isValidSupabaseUrl = (() => {
   }
 })();
 
-if (!supabaseUrl || !supabaseAnonKey) {
+export const supabaseConfigError =
+  !supabaseUrl || !supabaseAnonKey
+    ? "missing"
+    : !isValidSupabaseUrl
+      ? "invalid-url"
+      : null;
+
+if (supabaseConfigError === "missing") {
   console.error(
     "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Set both in the frontend environment."
   );
-} else if (!isValidSupabaseUrl) {
+} else if (supabaseConfigError === "invalid-url") {
   console.error(
     "VITE_SUPABASE_URL must be the HTTPS Supabase project URL without an API path."
   );
 }
 
 export const supabase =
-  isValidSupabaseUrl && supabaseAnonKey
+  !supabaseConfigError
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
