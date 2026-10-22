@@ -40,6 +40,10 @@ function getDocType(certificate) {
   }
 
   if (name.includes("diploma")) return "diploma_certificate";
+  if (name.includes("degree") && name.includes("marksheet")) {
+    return "degree_marksheet";
+  }
+
   if (name.includes("degree")) return "degree_certificate";
 
   if (

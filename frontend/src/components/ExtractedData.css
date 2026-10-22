@@ -82,6 +82,27 @@
   overflow: hidden;
 }
 
+.extracted-validation-warnings {
+  flex-shrink: 0;
+  max-height: 76px;
+  overflow: auto;
+  padding: 7px 10px;
+  border: 1px solid #f0d58a;
+  border-radius: 8px;
+  background: #fff9e8;
+  color: #684d0b;
+  font-size: 11px;
+}
+
+.extracted-validation-warnings ul {
+  margin: 3px 0;
+  padding-left: 18px;
+}
+
+.extracted-validation-warnings span {
+  color: #765b17;
+}
+
 /* Heading */
 .extracted-heading {
   flex-shrink: 0;

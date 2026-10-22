@@ -129,6 +129,11 @@ export default function ExtractedData({
   saving = false,
 }) {
   const ocrResult = documentData?.ocrResult || {};
+  const validationWarnings = Array.isArray(ocrResult.warnings)
+    ? ocrResult.warnings.filter(
+        (warning) => typeof warning === "string" && warning.trim()
+      )
+    : [];
 
   const certificateType = getCertificateType(
     certificate,
@@ -393,6 +398,22 @@ export default function ExtractedData({
             Enter the ID of the student who owns this certificate.
           </small>
         </section>
+
+        {validationWarnings.length > 0 && (
+          <section
+            className="extracted-validation-warnings"
+            role="status"
+            aria-label="OCR validation warnings"
+          >
+            <strong>Review these OCR checks before saving:</strong>
+            <ul>
+              {validationWarnings.map((warning, index) => (
+                <li key={`${index}-${warning}`}>{warning}</li>
+              ))}
+            </ul>
+            <span>Correct any inaccurate fields in the form below.</span>
+          </section>
+        )}
 
         {/* Certificate preview and extracted fields */}
         <section className="extracted-content-grid">

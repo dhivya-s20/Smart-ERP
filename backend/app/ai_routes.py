@@ -2,7 +2,6 @@
 # app/ai_routes.py
 # SMART ERP - AI Assistant + Supabase Student Certificate Lookup
 
-import logging
 import os
 import re
 from typing import Optional
@@ -13,8 +12,6 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 load_dotenv()
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ai", tags=["AI Chat"])
 
@@ -98,27 +95,12 @@ def authorize_student_lookup(authorization: Optional[str]):
             detail="Student lookup is not configured for authorized users.",
         )
 
-    try:
-        sb = get_supabase_client()
-        auth_result = sb.auth.get_user(token)
-        user = getattr(auth_result, "user", None)
+    # Use the same server-side token verification and safe error classification
+    # as the certificate routes.
+    from app.main import verify_supabase_access_token
 
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid or expired session. Please sign in again.",
-            )
-
-        user_id = str(user.id)
-
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception("Could not verify Supabase user.")
-        raise HTTPException(
-            status_code=401,
-            detail="Unable to verify your session.",
-        )
+    user = verify_supabase_access_token(token)
+    user_id = str(user.id)
 
     if user_id not in ALLOWED_LOOKUP_USER_IDS:
         raise HTTPException(

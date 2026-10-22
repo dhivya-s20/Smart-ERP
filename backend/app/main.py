@@ -158,6 +158,55 @@ def get_sb() -> Client:
     return _sb
 
 
+def verify_supabase_access_token(token: str) -> Any:
+    """Verify a caller token with Supabase Auth without exposing token details."""
+
+    try:
+        auth_result = get_sb().auth.get_user(token)
+        user = getattr(auth_result, "user", None)
+        if user and getattr(user, "id", None):
+            return user
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired session. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # Supabase Auth errors vary by SDK version. Classify only safe metadata;
+        # never return or log the exception text, which could contain credentials.
+        code = str(getattr(exc, "code", "") or "").lower()
+        message = str(getattr(exc, "message", "") or "").lower()
+        token_error_codes = {
+            "bad_jwt",
+            "invalid_jwt",
+            "jwt_expired",
+            "token_expired",
+            "invalid_token",
+        }
+        token_error_text = any(
+            marker in message
+            for marker in ("invalid jwt", "expired jwt", "jwt expired", "invalid token", "token expired")
+        )
+        if isinstance(exc, ValueError) or code in token_error_codes or token_error_text:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired session. Please sign in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from None
+
+        # An Auth API outage, project URL/key mismatch, or other upstream failure
+        # is not proof that the user's token is invalid.
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Supabase Auth could not verify the session. Check the backend "
+                "Supabase project configuration or retry shortly."
+            ),
+        ) from None
+
+
 def require_authenticated_user(
     authorization: Optional[str] = Header(default=None),
 ) -> Any:
@@ -171,24 +220,7 @@ def require_authenticated_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    try:
-        auth_result = get_sb().auth.get_user(token.strip())
-        user = getattr(auth_result, "user", None)
-        if not user or not getattr(user, "id", None):
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid or expired session. Please sign in again.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return user
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="Unable to verify your session. Please sign in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    return verify_supabase_access_token(token.strip())
 
 
 def require_certificate_admin(
@@ -607,16 +639,23 @@ def upload_certificate(
         )
 
     except Exception:
+        storage_cleanup_succeeded = True
         try:
             sb.storage.from_(BUCKET).remove([storage_path])
         except Exception:
-            pass
+            storage_cleanup_succeeded = False
+
+        cleanup_message = (
+            "The uploaded file was removed."
+            if storage_cleanup_succeeded
+            else "Storage cleanup could not be confirmed; contact the system administrator."
+        )
 
         raise HTTPException(
-            status_code=400,
+            status_code=502,
             detail=(
-                "Database insert failed. Check the target table "
-                "and column names."
+                "Certificate data could not be saved to the database. "
+                f"{cleanup_message} Please retry or contact the system administrator."
             ),
         )
 

@@ -125,6 +125,8 @@ export default function UploadPage({ onBack, onNext }) {
           <input
             ref={fileInputRef}
             className="upload-file-input"
+            id="certificate-upload"
+            name="certificate"
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
             onChange={handleFileChange}
