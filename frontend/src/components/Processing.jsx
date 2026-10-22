@@ -205,9 +205,11 @@ export default function Processing({
           timer = null;
         }
 
+        const message = err.message || "Unable to process the certificate.";
         setError(
-          err.message ||
-            "Unable to process the certificate. Please try again."
+          message === "Failed to fetch"
+            ? "Could not reach the OCR backend. Check that the backend is online, VITE_API_URL points to it, and its CORS settings allow this website."
+            : message
         );
 
         setStatus("Processing failed");

@@ -92,14 +92,22 @@ app = FastAPI(
 app.include_router(ai_router)
 
 configured_origins = os.getenv("FRONTEND_ORIGINS", "").strip()
-frontend_origins = (
-    [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
-    if configured_origins
-    else [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
+frontend_origins = ["https://smart-erp-five-umber.vercel.app"]
+frontend_origins.extend(
+    origin.strip()
+    for origin in configured_origins.split(",")
+    if origin.strip()
 )
+if not configured_origins:
+    frontend_origins.extend(
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+
+# Preserve order while removing duplicate origins.
+frontend_origins = list(dict.fromkeys(frontend_origins))
 
 if "*" in frontend_origins:
     raise RuntimeError("FRONTEND_ORIGINS must contain explicit origins, not '*'.")
